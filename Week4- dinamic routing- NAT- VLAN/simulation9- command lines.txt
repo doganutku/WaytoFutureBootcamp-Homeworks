@@ -1,0 +1,197 @@
+PRELIMINARY CONFIGURATION COMMANDS	
+
+router0
+enable 
+conf t
+hostname R0
+
+interface g0/0
+ip address 192.168.1.1 255.255.255.0
+no shut
+
+int s0/0/0
+ip address 10.1.4.1 255.255.255.0
+no shut
+
+int s0/1/1
+ip address 10.1.3.2 255.255.255.0
+no shut
+
+-----
+
+router1
+enable 
+conf t
+hostname R1
+interface g0/0
+ip address 192.168.4.1 255.255.255.0
+no shut
+
+int s0/1/1
+ip address 10.1.3.1 255.255.255.0
+no shut
+
+int s0/1/0
+ip address 10.2.4.1 255.255.255.0
+no shut
+
+-----
+
+router2
+enable 
+conf t
+hostname R2
+
+interface g0/0
+ip address 192.168.2.1 255.255.255.0
+no shut
+
+int s0/0/0
+ip address 10.1.4.2 255.255.255.0
+no shut
+
+int s0/0/1
+ip address 10.2.3.1 255.255.255.0
+no shut
+
+-----
+
+router3
+enable 
+conf t
+hostname R3
+
+interface g0/0
+ip address 192.168.3.1 255.255.255.0
+no shut
+
+int s0/0/1
+ip address 10.2.3.2 255.255.255.0
+no shut
+
+int s0/1/0
+ip address 10.2.4.2 255.255.255.0
+no shut
+
+-----
+
+RIP
+
+router0
+enable
+conf t
+router rip
+version 2
+no auto-summary
+network 192.168.1.0
+network 10.0.0.0
+
+router1
+enable
+conf t
+router rip
+version 2
+no auto-summary
+network 192.168.4.0
+network 10.0.0.0
+
+router2 (connection with ISP router)
+enable
+conf t
+router rip
+version 2
+no auto-summary
+network 192.168.2.0
+network 10.0.0.0
+
+ip route 0.0.0.0 0.0.0.0 78.1.1.14
+router rip
+default information-originate
+
+router3
+enable
+conf t
+router rip
+version 2
+no auto-summary
+network 192.168.3.0
+network 10.0.0.0
+
+-----
+
+OSPF
+
+router0
+enable
+conf t
+router ospf 1
+network 192.168.1.0 0.0.0.255 area 0
+network 0.0.0.0 0.255.255.255 area 0 
+
+router1
+enable
+conf t
+router ospf 1
+network 192.168.2.0 0.0.0.255 area 0
+network 0.0.0.0 0.255.255.255 area 0 
+
+default information-originate
+
+router2
+enable
+conf t
+router ospf 1
+network 192.168.4.0 0.0.0.255 area 0
+network 0.0.0.0 0.255.255.255 area 0 
+
+router3
+enable
+conf t
+router ospf 1
+network 192.168.3.0 0.0.0.255 area 0
+network 0.0.0.0 0.255.255.255 area 0 
+
+OSPF SECURITY
+
+for router0;
+R1(config)#router ospf 1
+R1(config-router)#passive interface g0/0
+
+
+for connection between router2 and router3;
+R2(config)#interface s0/1/0
+R2(config-if)#ip ospf authentication message-digest
+R2(config-if)#ip ospf message-digest-key 1 md5 cisco
+
+R3(config)#interface s0/1/0
+R3(config-if)#ip ospf authentication message-digest
+R3(config-if)#ip ospf message-digest-key 1 md5 cisco
+
+-----
+
+EIGRP
+
+routerx (apply for all routers)
+enable
+conf t
+Rx(config)#router eigrp 100
+Rx(config-router)#network 192.168.0.0 0.0.255.255
+Rx(config-router)#network 10.0.0.0 0.255.255.255
+Rx(config-router)#no auto-summary			
+
+-----
+
+NAT
+
+R1(config)#int g0/0
+R1(config-if)#ip nat inside 
+R1(config-if)#int s0/0/0
+R1(config-if)#ip nat inside
+R1(config-if)#int s0/0/1
+R1(config-if)#ip nat inside
+R1(config-if)#int g0/1
+R1(config-if)#ip nat outside
+
+R1(config)#access-list 5 permit any
+R1(config)#ip nat pool OUTPOOL 78.1.1.2 78.1.1.10 netmask 255.255.255.240
+R1(config)#ip nat inside source list 5 pool OUTPOOL overload
